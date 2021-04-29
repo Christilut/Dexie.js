@@ -4,7 +4,7 @@
  *
  * By David Fahlander, david.fahlander@gmail.com
  *
- * Version 3.1.0-alpha.9, Fri Apr 23 2021
+ * Version 3.1.0-alpha.10, Thu Apr 29 2021
  *
  * http://dexie.org
  *
@@ -639,14 +639,14 @@ export interface Version {
 	stores(schema: {
 		[tableName: string]: string | null;
 	}): Version;
-	upgrade(fn: (trans: Transaction) => void): Version;
+	upgrade(fn: (trans: Transaction) => PromiseLike<any> | void): Version;
 }
-export type RangeBtree = RangeBtreeNode | EmptyRange;
-export interface RangeBtreeNode {
+export type IntervalTree = IntervalTreeNode | EmptyRange;
+export interface IntervalTreeNode {
 	from: IndexableType; // lower bound
 	to: IndexableType; // upper bound
-	l: RangeBtreeNode | null; // left
-	r: RangeBtreeNode | null; // right
+	l: IntervalTreeNode | null; // left
+	r: IntervalTreeNode | null; // right
 	d: number; // depth
 }
 export interface EmptyRange {
@@ -687,7 +687,7 @@ export interface DbEvents extends DexieEventSet {
 export type ObservabilitySet = {
 	// `idb:${dbName}/${tableName}/changedRowContents` - keys.
 	// `idb:${dbName}/${tableName}/changedIndexes/${indexName}` - indexes
-	[part: string]: RangeBtree;
+	[part: string]: IntervalTree;
 };
 export interface DexieOnTxCommittedEvent {
 	subscribe(fn: (parts: ObservabilitySet) => any): void;
@@ -990,8 +990,8 @@ export declare module Dexie {
 	} // Because app-code may declare it.
 }
 export function liveQuery<T>(querier: () => T | Promise<T>): Observable<T>;
-export function mergeRanges(target: RangeBtree, newSet: RangeBtree): void;
-export function rangesOverlap(rangeSet1: RangeBtree, rangeSet2: RangeBtree): boolean;
+export function mergeRanges(target: IntervalTree, newSet: IntervalTree): void;
+export function rangesOverlap(rangeSet1: IntervalTree, rangeSet2: IntervalTree): boolean;
 /** Exporting 'Dexie' as the default export.
  **/
 export default Dexie;

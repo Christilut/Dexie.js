@@ -4,7 +4,7 @@
  *
  * By David Fahlander, david.fahlander@gmail.com
  *
- * Version 3.1.0-alpha.9, Fri Apr 23 2021
+ * Version 3.1.0-alpha.10, Thu Apr 29 2021
  *
  * http://dexie.org
  *
@@ -69,7 +69,7 @@
     function props(proto, extension) {
         if (typeof extension === 'function')
             extension = extension(getProto(proto));
-        keys(extension).forEach(function (key) {
+        (typeof Reflect === "undefined" ? keys : Reflect.ownKeys)(extension).forEach(function (key) {
             setProp(proto, key, extension[key]);
         });
     }
@@ -215,7 +215,7 @@
     function flatten(a) {
         return concat.apply([], a);
     }
-    var intrinsicTypeNames = "Boolean,String,Date,RegExp,Blob,File,FileList,ArrayBuffer,DataView,Uint8ClampedArray,ImageData,Map,Set"
+    var intrinsicTypeNames = "Boolean,String,Date,RegExp,Blob,File,FileList,ArrayBuffer,DataView,Uint8ClampedArray,ImageBitmap,ImageData,Map,Set,CryptoKey"
         .split(',').concat(flatten([8, 16, 32, 64].map(function (num) { return ["Int", "Uint", "Float"].map(function (t) { return t + num + "Array"; }); }))).filter(function (t) { return _global[t]; });
     var intrinsicTypes = intrinsicTypeNames.map(function (t) { return _global[t]; });
     var intrinsicTypeNameSet = arrayToObject(intrinsicTypeNames, function (x) { return [x, true]; });
@@ -1328,7 +1328,7 @@
         }
     }
 
-    var DEXIE_VERSION = '3.1.0-alpha.9';
+    var DEXIE_VERSION = '3.1.0-alpha.10';
     var maxString = String.fromCharCode(65535);
     var minKey = -Infinity;
     var INVALID_KEY_ARGUMENT = "Invalid key provided. Keys must be of type string, number, Date or Array<string | number | Date>.";
@@ -1385,13 +1385,15 @@
     };
 
     function workaroundForUndefinedPrimKey(keyPath) {
-        return function (obj) {
-            if (getByKeyPath(obj, keyPath) === undefined) {
-                obj = deepClone(obj);
-                delByKeyPath(obj, keyPath);
+        return typeof keyPath === "string" && !/\./.test(keyPath)
+            ? function (obj) {
+                if (obj[keyPath] === undefined && (keyPath in obj)) {
+                    obj = deepClone(obj);
+                    delete obj[keyPath];
+                }
+                return obj;
             }
-            return obj;
-        };
+            : function (obj) { return obj; };
     }
 
     var Table =  (function () {
@@ -4201,10 +4203,11 @@
             target.r = null;
             target.d = target.l ? target.l.d + 1 : 1;
         }
+        var rightWasCutOff = !target.r;
         if (left && !target.l) {
             mergeRanges(target, left);
         }
-        if (right && !target.r) {
+        if (right && rightWasCutOff) {
             mergeRanges(target, right);
         }
     }
@@ -4275,16 +4278,18 @@
     }
     function rebalance(target) {
         var _a, _b;
-        var clone = __assign({}, target);
         var diff = (((_a = target.r) === null || _a === void 0 ? void 0 : _a.d) || 0) - (((_b = target.l) === null || _b === void 0 ? void 0 : _b.d) || 0);
         var r = diff > 1 ? "r" : diff < -1 ? "l" : "";
         if (r) {
             var l = r === "r" ? "l" : "r";
-            extend(target, clone[r]);
-            extend(clone[r], clone);
-            clone[r][r] = target[l];
-            target[l] = clone[r];
-            clone[r].d = computeDepth(clone[r]);
+            var rootClone = __assign({}, target);
+            var oldRootRight = target[r];
+            target.from = oldRootRight.from;
+            target.to = oldRootRight.to;
+            target[r] = oldRootRight[r];
+            rootClone[r] = oldRootRight[l];
+            target[l] = rootClone;
+            rootClone.d = computeDepth(rootClone);
         }
         target.d = computeDepth(target);
     }
