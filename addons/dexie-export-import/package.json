@@ -41,8 +41,5 @@
     "rollup-plugin-alias": "^2.2.0",
     "typeson": "^5.8.2",
     "typeson-registry": "^1.0.0-alpha.21"
-  },
-  "dependencies": {
-    "dexie": "^3.0.0-alpha.10 || ^2.0.4"
   }
 }
